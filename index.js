@@ -29,23 +29,29 @@ const bookingCollection = db.collection("Bookings");
 
 const verifyToken = async (req, res, next) => {
   const authHeader = req.headers.authorization;
+
   if (!authHeader) {
     return res.status(401).send({ msg: "Unauthorized!" });
   }
+
   const token = authHeader.split(" ")[1];
+
   if (!token) {
     return res.status(401).send({ msg: "Unauthorized!" });
   }
 
-  const JWKS = createRemoteJWKSet(
-    new URL(`${process.env.CLIENT_URL}/api/auth/jwks`),
-  );
+  try {
+    const JWKS = createRemoteJWKSet(
+      new URL("/api/auth/jwks", process.env.CLIENT_URL)
+    );
 
-  try { 
     const { payload } = await jwtVerify(token, JWKS);
+
+    req.user = payload;
     next();
   } catch (error) {
-    return res.status(500).send({ msg: "Server Error!" });
+    console.error("JWT Verification Error:", error);
+    return res.status(401).send({ msg: "Invalid token!" });
   }
 };
 
@@ -109,7 +115,7 @@ app.delete("/my-bookings/:id", async (req, res) => {
   res.send(result);
 });
 
-//http://localhost:5000/my-bookings/
+//http://localhost:5000
 
 app.get("/", (req, res) => {
   res.send({ message: "Server is running fine!" });
